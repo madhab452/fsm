@@ -66,6 +66,12 @@ func (c Cancel) Name() string {
 type Complete struct{}
 
 func (p Complete) OnEvent() error {
+
+	//TODO: Now i want to check whether that order can be procesed to complete.
+	// two things must be satisfied.
+	// 1: the Paid Amount must be greater than zero
+	// 2: After successful transtion the status of resource should be changed to STATUS_COMPLETE
+
 	fmt.Println("thank you! see ya.")
 	return nil
 }

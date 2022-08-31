@@ -17,6 +17,7 @@ type Events []Event
 
 type States map[State]Events
 
+// TODO: Change it to something Nice. FsmObject MayBe
 type Resource interface {
 	CurrentState() State
 }
