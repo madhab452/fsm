@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"os"
 
 	"github.com/madhab452/fsm"
 )
@@ -35,7 +37,7 @@ const (
 
 type Create struct{}
 
-func (c Create) OnEvent() error {
+func (c Create) OnEvent(ctx context.Context) error {
 	fmt.Println("created successfully")
 	return nil
 }
@@ -45,7 +47,7 @@ func (c Create) Name() string {
 
 type Pay struct{}
 
-func (p Pay) OnEvent() error {
+func (p Pay) OnEvent(ctx context.Context) error {
 	fmt.Println("paid")
 	return nil
 }
@@ -55,7 +57,7 @@ func (c Pay) Name() string {
 
 type Cancel struct{}
 
-func (p Cancel) OnEvent() error {
+func (p Cancel) OnEvent(ctx context.Context) error {
 	fmt.Println("cancelled")
 	return nil
 }
@@ -65,8 +67,13 @@ func (c Cancel) Name() string {
 
 type Complete struct{}
 
-func (p Complete) OnEvent() error {
-	fmt.Println("thank you! see ya.")
+func (p Complete) OnEvent(ctx context.Context) error {
+	ord := ctx.Value("order").(*Order)
+
+	if ord.Amount <= 0 {
+		return fmt.Errorf("amount must be greater than zero to complete the order")
+	}
+	ord.Status = "STATUS_COMPLETE"
 	return nil
 }
 func (c Complete) Name() string {
@@ -87,10 +94,16 @@ func main() {
 
 	order := &Order{
 		Status: "STATUS_PAID",
+		Amount: 100,
 	}
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, "order", order)
 
-	err := fsmimpl.SendEvent(&Create{}, order)
+	err := fsmimpl.SendEvent(ctx, &Complete{}, order)
 	if err != nil {
 		fmt.Println(err)
+		os.Exit(1)
 	}
+
+	fmt.Println("After Transition", order.Status)
 }
