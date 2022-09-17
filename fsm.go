@@ -31,13 +31,12 @@ type Events []Event
 type States map[State]Events
 
 // Resource any object that can be processed by fsm.
-// must implement CurrentState()
 type Resource interface {
 	CurrentState() State
 }
 
 // FSM finite state machine
-type fsm struct {
+type FSM struct {
 	states       States
 	currentState State
 }
@@ -56,7 +55,7 @@ func (s State) hasEvent(events Events, event Event) bool {
 }
 
 // SendEvent takes event and object and process the given event.
-func (fsm *fsm) SendEvent(ctx context.Context, e Event, r Resource) error {
+func (fsm *FSM) SendEvent(ctx context.Context, e Event, r Resource) error {
 	fsm.currentState = r.CurrentState()
 	events, ok := fsm.states[fsm.currentState]
 
@@ -76,8 +75,8 @@ func (fsm *fsm) SendEvent(ctx context.Context, e Event, r Resource) error {
 }
 
 // NewFSM returns a new FSM.
-func NewFSM(states States) *fsm {
-	return &fsm{
+func NewFSM(states States) *FSM {
+	return &FSM{
 		states: states,
 	}
 }

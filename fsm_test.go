@@ -2,62 +2,161 @@ package fsm_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/madhab452/fsm"
+	"github.com/stretchr/testify/assert"
 )
+
+func TestNewFSM(t *testing.T) {
+	states := fsm.States{}
+	sm := fsm.NewFSM(states)
+	assert.NotNil(t, sm)
+}
 
 const (
-	On  fsm.State = "on"
-	Off fsm.State = "off"
+	State1 fsm.State = "state-1"
+	State2 fsm.State = "state-2"
+	State3 fsm.State = "State-3"
 )
 
-type TurnOn struct{}
+type Event1 struct {
+}
 
-func (o TurnOn) OnEvent(ctx context.Context) error {
+func (e Event1) Name() string {
+	return "Event1"
+}
+
+func (e Event1) OnEvent(ctx context.Context) error {
 	return nil
 }
 
-func (o TurnOn) Name() string {
-	return "TurnOn"
+type Event2 struct{}
+
+func (e Event2) Name() string {
+	return "Event2"
 }
 
-type TurnOff struct{}
-
-func (o TurnOff) OnEvent(ctx context.Context) error {
+func (e Event2) OnEvent(ctx context.Context) error {
 	return nil
 }
 
-func (o TurnOff) Name() string {
-	return "TurnOff"
+type Event3 struct{}
+
+func (e Event3) Name() string {
+	return "Event3"
 }
 
-type LightSwitch struct {
+func (e Event3) OnEvent(ctx context.Context) error {
+	myRes := ctx.Value("myRes").(MyRes)
+
+	fmt.Println(myRes)
+
+	if myRes.Number == 13 {
+		return fmt.Errorf("13 is not allowed and considered unlucky.")
+	}
+	return nil
+}
+
+type MyRes struct {
+	Number int
 	Status string
 }
 
-func (ls LightSwitch) CurrentState() fsm.State {
-	switch ls.Status {
-	case "on":
-		return On
-	case "off":
-		return Off
-	default:
-		return fsm.StateUnknown
+func (mr *MyRes) CurrentState() fsm.State {
+	switch mr.Status {
+	case "status-1":
+		return State1
+	case "status-2":
+		return State2
+	case "status-3":
+		return State3
 	}
+	return fsm.StateUnknown
 }
 
-func TestNewFSM(t *testing.T) {
+func TestSendEvent(t *testing.T) {
 	states := fsm.States{
-		On:  fsm.Events{TurnOff{}},
-		Off: fsm.Events{TurnOn{}},
+		State1: {Event2{}, Event3{}},
+		State2: {Event3{}},
+		State3: {},
 	}
 
-	lightSwitchFsm := fsm.NewFSM(states)
-
-	r := LightSwitch{
-		Status: "on",
+	tests := []struct {
+		name      string
+		wantError error
+		getFSM    func() *fsm.FSM
+		getArgs   func() (context.Context, fsm.Event, fsm.Resource)
+	}{
+		{
+			name:      "unknown fsm state",
+			wantError: fmt.Errorf("unknown state: fsm error"),
+			getFSM: func() *fsm.FSM {
+				return fsm.NewFSM(states)
+			},
+			getArgs: func() (context.Context, fsm.Event, fsm.Resource) {
+				myRes := MyRes{
+					Number: 10,
+					Status: "status-0",
+				}
+				return context.Background(), Event2{}, &myRes
+			},
+		},
+		{
+			name:      "same state transition",
+			wantError: fmt.Errorf("unprocessable event. couldn't found: \"Event1\", fsm error"),
+			getFSM: func() *fsm.FSM {
+				return fsm.NewFSM(states)
+			},
+			getArgs: func() (context.Context, fsm.Event, fsm.Resource) {
+				myRes := MyRes{
+					Number: 10,
+					Status: "status-1",
+				}
+				return context.Background(), Event1{}, &myRes
+			},
+		},
+		{
+			name:      "error while processing an event",
+			wantError: fmt.Errorf("error processing event - \"13 is not allowed and considered unlucky.\": fsm error"),
+			getFSM: func() *fsm.FSM {
+				return fsm.NewFSM(states)
+			},
+			getArgs: func() (context.Context, fsm.Event, fsm.Resource) {
+				myRes := MyRes{
+					Number: 13,
+					Status: "status-1",
+				}
+				ctx := context.Background()
+				ctxWithValue := context.WithValue(ctx, "myRes", myRes)
+				return ctxWithValue, Event3{}, &myRes
+			},
+		},
+		{
+			name:      "all good",
+			wantError: nil,
+			getFSM: func() *fsm.FSM {
+				return fsm.NewFSM(states)
+			},
+			getArgs: func() (context.Context, fsm.Event, fsm.Resource) {
+				myRes := MyRes{
+					Number: 10,
+					Status: "status-1",
+				}
+				ctx := context.Background()
+				ctxWithValue := context.WithValue(ctx, "myRes", myRes)
+				return ctxWithValue, Event3{}, &myRes
+			},
+		},
 	}
 
-	lightSwitchFsm.SendEvent(context.Background(), TurnOn{}, r)
+	for _, tt := range tests {
+		err := tt.getFSM().SendEvent(tt.getArgs())
+		if tt.wantError != nil {
+			assert.EqualError(t, err, tt.wantError.Error())
+			return
+		}
+		assert.Nil(t, err)
+	}
 }
