@@ -1,8 +1,8 @@
-package fsm_test
+package main
 
 import (
 	"context"
-	"testing"
+	"fmt"
 
 	"github.com/madhab452/fsm"
 )
@@ -15,6 +15,7 @@ const (
 type TurnOn struct{}
 
 func (o TurnOn) OnEvent(ctx context.Context) error {
+	fmt.Println("switch turned on")
 	return nil
 }
 
@@ -25,6 +26,7 @@ func (o TurnOn) Name() string {
 type TurnOff struct{}
 
 func (o TurnOff) OnEvent(ctx context.Context) error {
+	fmt.Println("switch turned off")
 	return nil
 }
 
@@ -47,7 +49,7 @@ func (ls LightSwitch) CurrentState() fsm.State {
 	}
 }
 
-func TestNewFSM(t *testing.T) {
+func main() {
 	states := fsm.States{
 		On:  fsm.Events{TurnOff{}},
 		Off: fsm.Events{TurnOn{}},
@@ -59,5 +61,5 @@ func TestNewFSM(t *testing.T) {
 		Status: "on",
 	}
 
-	lightSwitchFsm.SendEvent(context.Background(), TurnOn{}, r)
+	lightSwitchFsm.SendEvent(context.Background(), TurnOff{}, r)
 }
