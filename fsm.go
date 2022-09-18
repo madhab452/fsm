@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 )
 
 var ErrFsm = errors.New("fsm error")
@@ -30,8 +31,8 @@ type Events []Event
 // States a map of possible state and events assotiated with the state.
 type States map[State]Events
 
-// An object or data that is processed through fsm
-type FsmThing interface {
+// Resource any object that can be processed by fsm.
+type Resource interface {
 	CurrentState() State
 }
 
@@ -39,31 +40,40 @@ type FsmThing interface {
 type FSM struct {
 	states       States
 	currentState State
+	mu           sync.Mutex
 }
 
-// SendEvent  takes event and object and process the given event.
-func (fsm *FSM) SendEvent(ctx context.Context, e Event, th FsmThing) error {
-	if th.CurrentState() == StateUnknown {
-		return fmt.Errorf("%w: unknown fsm state", ErrFsm)
+// hasEvent checks if any event is attached to current state
+func (s State) hasEvent(events Events, event Event) bool {
+	if s == StateUnknown {
+		return false
 	}
-	fsm.currentState = th.CurrentState()
-	events, ok := fsm.states[fsm.currentState]
-
-	if !ok {
-		return fmt.Errorf("%w: unknown state: %v", ErrFsm, fsm.currentState)
-	}
-
-	foundEvt := false
 	for _, evt := range events {
-		if e.Name() == evt.Name() {
-			foundEvt = true
-			if err := e.OnEvent(ctx); err != nil {
-				return fmt.Errorf("%w: error processing event: %q", ErrFsm, err)
-			}
+		if event.Name() == evt.Name() {
+			return true
 		}
 	}
-	if !foundEvt {
-		return fmt.Errorf("%w: state transition is not allowed for: %v, from state: %v, pls check your configuration", ErrFsm, e.Name(), fsm.currentState)
+	return false
+}
+
+// SendEvent takes event and object and process the given event.
+func (fsm *FSM) SendEvent(ctx context.Context, e Event, r Resource) error {
+	fsm.mu.Lock()
+	defer fsm.mu.Unlock()
+
+	fsm.currentState = r.CurrentState()
+	events, ok := fsm.states[fsm.currentState]
+
+	if fsm.currentState == StateUnknown || !ok {
+		return fmt.Errorf("unknown state: %w", ErrFsm)
+	}
+
+	if !fsm.currentState.hasEvent(events, e) {
+		return fmt.Errorf("unprocessable event. couldn't found: %q, %w", e.Name(), ErrFsm)
+	}
+
+	if err := e.OnEvent(ctx); err != nil {
+		return fmt.Errorf("error processing event - %q: %w", err, ErrFsm)
 	}
 
 	return nil

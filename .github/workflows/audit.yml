@@ -1,0 +1,45 @@
+name: Golang CI Quality Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  golangci-lint:
+    name: runner / golancli-lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v3
+
+      - name: golangci-lint
+        uses: reviewdog/action-golangci-lint@v2
+        with:
+          # optionally use a specific version of Go rather than the latest one
+          go_version: "1.17"
+          golangci_lint_flags: "--exclude-use-default=false --skip-dirs-use-default"
+          reporter: github-pr-review
+
+  golangci-test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.17
+
+    - name: Verify dependencies
+      run: go mod verify
+
+    - name: Build
+      run: go build -v ./...
+
+    - name: Run go vet
+      run: go vet ./...
+
+    - name: Run tests
+      run: go test -race -vet=off ./...
