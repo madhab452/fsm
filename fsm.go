@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 )
 
 var ErrFsm = errors.New("fsm error")
@@ -39,6 +40,7 @@ type Resource interface {
 type FSM struct {
 	states       States
 	currentState State
+	mu           sync.Mutex
 }
 
 // hasEvent checks if any event is attached to current state
@@ -56,6 +58,9 @@ func (s State) hasEvent(events Events, event Event) bool {
 
 // SendEvent takes event and object and process the given event.
 func (fsm *FSM) SendEvent(ctx context.Context, e Event, r Resource) error {
+	fsm.mu.Lock()
+	defer fsm.mu.Unlock()
+
 	fsm.currentState = r.CurrentState()
 	events, ok := fsm.states[fsm.currentState]
 

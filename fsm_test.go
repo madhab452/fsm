@@ -51,8 +51,6 @@ func (e Event3) Name() string {
 func (e Event3) OnEvent(ctx context.Context) error {
 	myRes := ctx.Value("myRes").(MyRes)
 
-	fmt.Println(myRes)
-
 	if myRes.Number == 13 {
 		return fmt.Errorf("13 is not allowed and considered unlucky.")
 	}
