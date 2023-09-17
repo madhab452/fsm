@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/madhab452/fsm"
 )
@@ -19,19 +20,11 @@ func (o TurnOn) OnEvent(ctx context.Context) error {
 	return nil
 }
 
-func (o TurnOn) Name() string {
-	return "TurnOn"
-}
-
 type TurnOff struct{}
 
 func (o TurnOff) OnEvent(ctx context.Context) error {
 	fmt.Println("switch turned off")
 	return nil
-}
-
-func (o TurnOff) Name() string {
-	return "TurnOff"
 }
 
 type LightSwitch struct {
@@ -61,5 +54,9 @@ func main() {
 		Status: "on",
 	}
 
-	lightSwitchFsm.SendEvent(context.Background(), TurnOff{}, r)
+	err := lightSwitchFsm.SendEvent(context.Background(), TurnOn{}, r)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 }

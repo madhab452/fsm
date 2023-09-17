@@ -19,19 +19,17 @@ const (
 
 // Event defines a processable event in a finite state machine.
 type Event interface {
-	// OnEvent func to run when that event occured.
+	// OnEvent
 	OnEvent(ctx context.Context) error
-	// Name EventName
-	Name() string
 }
 
 // Events slice of events
 type Events []Event
 
-// States a map of possible state and events assotiated with the state.
+// States a map of possible state and events associated with the state
 type States map[State]Events
 
-// Resource any object that can be processed by fsm.
+// Resource fsm resource.
 type Resource interface {
 	CurrentState() State
 }
@@ -49,14 +47,14 @@ func (s State) hasEvent(events Events, event Event) bool {
 		return false
 	}
 	for _, evt := range events {
-		if event.Name() == evt.Name() {
+		if fmt.Sprintf("%T", event) == fmt.Sprintf("%T", evt) {
 			return true
 		}
 	}
 	return false
 }
 
-// SendEvent takes event and object and process the given event.
+// SendEvent takes event and process the given event.
 func (fsm *FSM) SendEvent(ctx context.Context, e Event, r Resource) error {
 	fsm.mu.Lock()
 	defer fsm.mu.Unlock()
@@ -69,7 +67,7 @@ func (fsm *FSM) SendEvent(ctx context.Context, e Event, r Resource) error {
 	}
 
 	if !fsm.currentState.hasEvent(events, e) {
-		return fmt.Errorf("unprocessable event. couldn't found: %q, %w", e.Name(), ErrFsm)
+		return fmt.Errorf("transition is not allowed: couldn't found: %T, %w", e, ErrFsm)
 	}
 
 	if err := e.OnEvent(ctx); err != nil {

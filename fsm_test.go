@@ -21,12 +21,7 @@ const (
 	State3 fsm.State = "State-3"
 )
 
-type Event1 struct {
-}
-
-func (e Event1) Name() string {
-	return "Event1"
-}
+type Event1 struct{}
 
 func (e Event1) OnEvent(ctx context.Context) error {
 	return nil
@@ -34,24 +29,16 @@ func (e Event1) OnEvent(ctx context.Context) error {
 
 type Event2 struct{}
 
-func (e Event2) Name() string {
-	return "Event2"
-}
-
 func (e Event2) OnEvent(ctx context.Context) error {
 	return nil
 }
 
 type Event3 struct{}
 
-func (e Event3) Name() string {
-	return "Event3"
-}
-
 func (e Event3) OnEvent(ctx context.Context) error {
-	myRes := ctx.Value("myRes").(MyRes)
+	r := ctx.Value("myRes").(MyRes)
 
-	if myRes.Number == 13 {
+	if r.Number == 13 {
 		return fmt.Errorf("13 is not allowed and considered unlucky.")
 	}
 	return nil
