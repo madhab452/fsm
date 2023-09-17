@@ -41,9 +41,6 @@ func (c Create) OnEvent(ctx context.Context) error {
 	fmt.Println("created successfully")
 	return nil
 }
-func (c Create) Name() string {
-	return "Create"
-}
 
 type Pay struct{}
 
@@ -51,18 +48,12 @@ func (p Pay) OnEvent(ctx context.Context) error {
 	fmt.Println("paid")
 	return nil
 }
-func (c Pay) Name() string {
-	return "Pay"
-}
 
 type Cancel struct{}
 
 func (p Cancel) OnEvent(ctx context.Context) error {
 	fmt.Println("cancelled")
 	return nil
-}
-func (c Cancel) Name() string {
-	return "Cancel"
 }
 
 type Complete struct{}
@@ -76,14 +67,10 @@ func (p Complete) OnEvent(ctx context.Context) error {
 	ord.Status = "STATUS_COMPLETE"
 	return nil
 }
-func (c Complete) Name() string {
-	return "Complete"
-}
 
 func main() {
 	states := map[fsm.State]fsm.Events{
-		StateCreating: {Create{}},
-
+		StateCreating:      {Create{}},
 		StateCreated:       {Pay{}},
 		StatePaid:          {Complete{}},
 		StatePaymentFailed: {Pay{}, Cancel{}},
@@ -99,7 +86,7 @@ func main() {
 	ctx := context.Background()
 	ctx = context.WithValue(ctx, "order", order)
 
-	err := fsmimpl.SendEvent(ctx, &Complete{}, order)
+	err := fsmimpl.SendEvent(ctx, Complete{}, order)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
